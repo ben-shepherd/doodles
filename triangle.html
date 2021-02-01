@@ -1,0 +1,306 @@
+<html>
+    <head>
+        <title>Triangle</title>
+        <style>*{padding:0; margin:0;}</style>
+    </head>
+    <body>
+        <canvas id="canvas"></canvas>
+
+        <script>
+            
+
+            const renderSpeed = 1;
+            const drawTraceText = false;
+            const drawTraceLines = false;
+            const drawText = false;
+
+            var canvas = document.getElementById('canvas');
+            var ctx = canvas.getContext('2d');
+            var W = window.innerWidth;
+            var H = window.innerHeight;
+            canvas.width = W;
+            canvas.height = H;
+
+            let triangles = [];
+            var triangleStartCount = 3;
+
+            var startPoint = {x: 0, y: 0, ok: false};
+            var iterationCount = 0;
+            var triangleIndex = null;
+            var triangleIndexLast = null;
+
+            const w50 = W * 50 / 100;
+            const w20 = W * 20 / 100;
+            const w40 = W * 40 / 100;
+            const w60 = W * 60 / 100;
+            const w80 = W * 80 / 100;
+
+            const h20 = percent(H, 20);
+            const h40 = percent(H, 40);
+            const h50 = percent(H, 50);
+            const h60 = percent(H, 60);
+            const h80 = percent(H, 80);
+
+            // Create 3 triangle points
+            for(let i = 0; i < triangleStartCount; i++) {
+                let color;
+                let x = 0;
+                let y = 0;
+
+                // Leftest point
+                if(i === 0) {
+                    color = 'red';
+                    x = ranInt(w20, w40);
+                    y = ranInt(h60, h80);
+                } 
+                // Right point
+                else if(i === 1) {
+                    color = 'green';
+                    x = ranInt(w60, w80);
+                    y = ranInt(h60, h80);
+                } 
+                // Top point
+                else if(i === 2) {
+                    color = 'blue';
+                    x = ranInt(w40, w60);
+                    y = ranInt(0, h40);
+                }
+
+                triangles.push({
+                    x: x, 
+                    y: y,
+                    color: '#FFF'
+                })
+            }
+            
+            // Get the start point
+            const leftestTriangleIndex = 0;
+            const rightestTriangleIndex = 1;
+            const highestTriangleIndex = 2;
+
+            window.addEventListener('resize', function() {
+                W = window.innerWidth;
+                H = window.innerHeight;
+                canvas.width = W;
+                canvas.height = H;
+            })
+
+            // Make start point
+            startPoint.x = W / 2;
+            startPoint.y = H / 2;
+
+            // Traces
+            var traces = null;
+            var lastTrace = null
+
+            update({
+                triangles, 
+                leftestTriangleIndex, 
+                highestTriangleIndex, 
+                rightestTriangleIndex, 
+                startPoint
+            })
+
+            function update(options)
+            {
+                let {
+                    triangles,
+                    leftestTriangleIndex,
+                    highestTriangleIndex,
+                    rightestTriangleIndex,
+                    startPoint,
+                    traces,
+                    lastTrace
+                } = options;
+
+                if(typeof traces === 'undefined') {
+                    traces = null;
+                }
+                if(typeof lastTrace === 'undefined') {
+                    lastTrace = null;
+                }
+
+                var randomIndex = ranInt(0, triangles.length - 1);
+                var randomTriangle = triangles[randomIndex];
+
+                if(traces === null) {
+                    traces = [];
+                    lastTrace = {...startPoint}
+                } else {
+                    lastTrace = traces[traces.length - 1];
+                }
+
+                const lx = lastTrace.x,
+                    ly = lastTrace.y,
+                    tx = randomTriangle.x,
+                    ty = randomTriangle.y;
+
+                let xdist = lx - tx,
+                    ydist = ly - ty;
+
+                let nx = xdist / 2 + tx;
+                let ny = ydist / 2 + ty;
+                
+                
+
+                let newTrace = {
+                    x: Math.floor(nx),
+                    y: Math.floor(ny),
+                    triangle: randomIndex
+                }
+                traces = [...traces, newTrace];
+
+                const triangleText = (() => {
+                    switch (randomIndex) {
+                        case 0: return 'Left';
+                        case 1: return 'Right';
+                        case 2: return 'Top';
+                    }
+                })(randomIndex);
+
+                const debug = [
+                    "Screen: "+W+","+H,
+                    "Iteration: "+iterationCount,
+                    "Traces: "+traces.length,
+                    "Selected: "+triangleText,
+                    "Last trace: "+traces[traces.length - 1].x+','+traces[traces.length - 1].y,
+                ]
+
+                draw({
+                    triangles, 
+                    leftestTriangleIndex, 
+                    highestTriangleIndex, 
+                    rightestTriangleIndex, 
+                    lastTrace, 
+                    traces,
+                    debug
+                });
+
+                lastTriangleIndex = triangleIndex;
+                iterationCount++;
+
+                setTimeout(() => {
+                    update({
+                        triangles,
+                        leftestTriangleIndex,
+                        highestTriangleIndex,
+                        rightestTriangleIndex,
+                        startPoint,
+                        traces,
+                        lastTrace
+                    });
+                }, renderSpeed)
+            }
+
+            function draw(args) 
+            {
+                const {
+                    triangles, 
+                    leftestTriangleIndex, 
+                    highestTriangleIndex, 
+                    rightestTriangleIndex, 
+                    lastTrace, 
+                    traces,
+                    debug
+                } = args
+
+                // Background
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0,0,W,H);
+
+                // Triangles
+                if(drawText) {
+                    for(let i = 0; i < triangles.length; i++) {
+                        var t = triangles[i];
+                        const offsetX = 30, offsetY = 50;
+                        point(ctx, t.x, t.y);
+
+                        if(i === highestTriangleIndex) {
+                            text(ctx, 'highest '+t.x+','+t.y, t.x + offsetX, t.y + (offsetY * -1), '17px courier', '#FFF');
+                        }
+                        if(i === leftestTriangleIndex) {
+                            text(ctx, 'leftest '+t.x+','+t.y, t.x + offsetX, t.y + offsetY, '17px courier', '#FFF');
+                        }
+                        if(i === rightestTriangleIndex) {
+                            text(ctx, 'rightest '+t.x+','+t.y, t.x + offsetX, t.y + offsetY, '17px courier', '#FFF');
+                        }
+                    }
+                }
+
+                // Triangle Lines
+                if(drawTraceLines) {
+                    line(ctx, triangles[highestTriangleIndex].x, triangles[highestTriangleIndex].y, triangles[leftestTriangleIndex].x, triangles[leftestTriangleIndex].y);
+                    line(ctx, triangles[leftestTriangleIndex].x, triangles[leftestTriangleIndex].y, triangles[rightestTriangleIndex].x, triangles[rightestTriangleIndex].y);
+                    line(ctx, triangles[rightestTriangleIndex].x, triangles[rightestTriangleIndex].y, triangles[highestTriangleIndex].x, triangles[highestTriangleIndex].y);
+                }
+
+                // Start point
+                if(drawText) {
+                    point(ctx, startPoint.x, startPoint.y);
+                    text(ctx, 'START '+startPoint.x+','+startPoint.y, startPoint.x, startPoint.y - 10, '14px courier', '#FFF', 'center');
+                }
+
+                // Traces
+                for(var i in traces) {    
+                    point(ctx, traces[i].x, traces[i].y, 'green');
+                
+                    if(drawTraceText) {
+                        text(ctx, i+','+traces[i].x+','+traces[i].y, traces[i].x, traces[i].y, '14px courier', '#d66772');
+                    }
+
+                    if(drawTraceLines) {
+                        const beforeIndex = i - 1;
+                        if(beforeIndex >= 0) {
+                            line(ctx, traces[beforeIndex].x, traces[beforeIndex].y, traces[i].x, traces[i].y);
+                        }
+                    }
+                    
+                }
+
+                if(drawText) {
+                    if(typeof debug !== 'undefined') {
+                        for(var i in debug) {
+                            text(ctx, debug[i], 35, 25 + 2 * (i + 1), '16px courier', '#FFF');
+                        }
+                    }
+                }
+            }
+
+            function text(ctx, textStr, x, y, font, style, align)
+            {
+                if(typeof font === 'undefined' || font === null) {
+                    font = '10px Courier';;
+                }
+                if(typeof style === 'undefined' || style === null) {
+                    style = '#000';
+                }
+                if(typeof align === 'undefined' || align === null) {
+                    align = 'left';
+                }
+                ctx.fillStyle = style;
+                ctx.font = font;
+                ctx.textAlign = align;
+                ctx.fillText(textStr, x, y);
+            }
+            function point(ctx, x, y){
+                ctx.fillStyle = 'red';
+                ctx.fillRect(x,y,5,5);
+            }
+            function line(ctx, x1, y1, x2, y2)
+            {
+                ctx.strokeStyle = '#EFEFEF';
+                ctx.beginPath()
+                ctx.moveTo(x1,y1)
+                ctx.lineTo(x2,y2)
+                ctx.stroke();
+            }
+            function percent(value, percentValue) {
+                return value * percentValue / 100;
+            }
+            function ranInt(min, max) {
+                return Math.round(Math.random() * (max - min) + min);
+            }
+        </script>
+    </body>
+</html>
